@@ -26,11 +26,11 @@ parse_yaml() {
 # Config options you may pass via Docker like so 'docker run -e "<option>=<value>"':
 # - KEY=<value>
 
-export IDF_PATH=/root/esp/esp-idf
+# export IDF_PATH=/root/esp/esp-idf
 export PATH=$PATH:/root/esp/xtensa-esp32-elf/bin
 
 echo "export PATH=$PATH:/root/esp/xtensa-esp32-elf/bin" > ~/.profile
-echo "export IDF_PATH=/root/esp/esp-idf" > ~/.profile
+# echo "export IDF_PATH=/root/esp/esp-idf" > ~/.profile
 
 if [ -z "$WORKDIR" ]; then
   cd $WORKDIR
@@ -47,63 +47,41 @@ cd /opt/workspace
 
 BUILD_TYPE='platformio'
 
-if [[ -f "./sdkconfig" ]]; then
-  echo "Found `sdkconfig` in workspace root, switching to ESP-IDF build."
-  BUILD_TYPE='espidf'
-fi
-
 if [[ $BUILD_TYPE == "platformio" ]]; then
   if [[ ! -f "./platformio.ini" ]]; then
     echo "Incorrect workdir $(pwd)"
-  else
-    if [[ ! -z $(cat ./platformio.ini | grep -v "^;" | grep "framework" | grep "espidf") ]]; then
-      echo "Found `framework = espidf` in platformio.ini, switching to ESP-IDF build."
-      BUILD_TYPE='espidf'
-    fi
   fi
 fi
 
-if [[ $BUILD_TYPE != "platformio" ]]; then
+platformio run # --silent # suppressed progress reporting
 
-  make
+if [[ -d build ]]; then
+  rm -rf build
+fi
 
-  rm -rf build/partitions_singleapp.bin
+mkdir build
 
-  cp -vf build/*.bin /opt/workspace/build/firmware.bin
-  cp -vf build/*.elf /opt/workspace/build/firmware.elf
+cd ./.pio/build/
 
-else
+# WARNING! Currently supports only one simultaneous
+# build-environment and overwrites OUTFILE(s) with recents.
 
-  platformio run # --silent # suppressed progress reporting
-
-  if [[ -d build ]]; then
-    rm -rf build
-  fi
-
-  mkdir build
-
-  cd ./.pio/build/
-
-  # WARNING! Currently supports only one simultaneous
-  # build-environment and overwrites OUTFILE(s) with recents.
-
-  for dir in $(ls -d */); do
-    if [[ -d $dir ]]; then
-      pushd $dir
-      if [[ -f firmware.bin ]]; then
-        if [[ ! -d /opt/workspace/build ]]; then
-          mkdir -p /opt/workspace/build
-        fi
-        cp -vf firmware.bin /opt/workspace/build/firmware.bin
-        if [[ -f firmware.elf ]]; then
-          cp -vf firmware.elf /opt/workspace/build/firmware.elf
-        fi
+for dir in $(ls -d */); do
+  if [[ -d $dir ]]; then
+    pushd $dir
+    if [[ -f firmware.bin ]]; then
+      if [[ ! -d /opt/workspace/build ]]; then
+        mkdir -p /opt/workspace/build
       fi
-      popd
+      cp -vf firmware.bin /opt/workspace/build/firmware.bin
+      if [[ -f firmware.elf ]]; then
+        cp -vf firmware.elf /opt/workspace/build/firmware.elf
+      fi
     fi
-  done
+    popd
+  fi
+done
 
-fi
 
 RESULT=$?
 
