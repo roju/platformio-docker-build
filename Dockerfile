@@ -6,6 +6,7 @@ WORKDIR /opt/workspace
 COPY cmd.sh /opt/
 
 COPY dummy-esp8266 /opt/dummy-esp8266
+COPY dummy-esp32 /opt/dummy-esp32
 
 RUN apt-get update -qq && apt-get install -qq -y --no-install-recommends \
 	gcc unzip srecord bc xz-utils python curl python-pip python-dev build-essential \
